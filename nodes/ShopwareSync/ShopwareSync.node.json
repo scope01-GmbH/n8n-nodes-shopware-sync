@@ -1,0 +1,18 @@
+{
+	"node": "n8n-nodes-base.shopwareSync",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Data & Storage", "Development"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/scope01gmbh/n8n-nodes-shopware-sync?tab=readme-ov-file#credentials"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/scope01gmbh/n8n-nodes-shopware-sync?tab=readme-ov-file"
+			}
+		]
+	}
+}
