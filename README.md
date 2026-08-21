@@ -146,6 +146,30 @@ SW_CLIENT_SECRET=... \
 node test/e2e.mjs
 ```
 
+### Testing in an existing n8n instance
+
+Before the package is on npm, you can side-load the built node into a running
+n8n. Copy `dist` into n8n's custom extensions folder (`~/.n8n/custom`, which lives
+in the `n8n_data` volume for Docker installs):
+
+```bash
+npm run build
+docker exec -u node n8n mkdir -p /home/node/.n8n/custom/n8n-nodes-shopware-sync
+docker cp dist/. n8n:/home/node/.n8n/custom/n8n-nodes-shopware-sync/
+```
+
+The node imports `n8n-workflow` at runtime, and the custom folder has no
+`node_modules` to resolve it from, so link n8n's own copy or the node fails to
+load with `Cannot find module 'n8n-workflow'`:
+
+```bash
+docker exec -u node n8n ln -sfn \
+  /usr/local/lib/node_modules/n8n/node_modules/n8n-workflow \
+  /home/node/.n8n/custom/n8n-nodes-shopware-sync/node_modules/n8n-workflow
+```
+
+Restart n8n afterwards - custom directories are scanned once at boot.
+
 ## License
 
 [MIT](LICENSE)

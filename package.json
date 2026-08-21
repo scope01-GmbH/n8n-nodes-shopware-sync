@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "n8n community node for the Shopware 6 Sync API - bulk upsert and delete across any entity, with automatic batching",
   "license": "MIT",
-  "homepage": "https://github.com/scope01gmbh/n8n-nodes-shopware-sync",
+  "homepage": "https://github.com/scope01-GmbH/n8n-nodes-shopware-sync",
   "keywords": [
     "n8n-community-node-package",
     "n8n",
@@ -13,12 +13,16 @@
     "sync",
     "bulk-import"
   ],
-  "author": { "name": "scope01 GmbH", "email": "invoice@scope01.com" },
+  "author": {
+    "name": "scope01 GmbH",
+    "email": "invoice@scope01.com"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/scope01gmbh/n8n-nodes-shopware-sync.git"
+    "url": "https://github.com/scope01-GmbH/n8n-nodes-shopware-sync.git"
   },
   "scripts": {
+    "prebuild": "rm -rf dist .tsbuildinfo",
     "build": "n8n-node build",
     "build:watch": "tsc --watch",
     "dev": "n8n-node dev",
@@ -27,12 +31,18 @@
     "release": "n8n-node release",
     "prepublishOnly": "n8n-node prerelease"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "n8n": {
     "n8nNodesApiVersion": 1,
     "strict": true,
-    "credentials": ["dist/credentials/ShopwareSyncApi.credentials.js"],
-    "nodes": ["dist/nodes/ShopwareSync/ShopwareSync.node.js"]
+    "credentials": [
+      "dist/credentials/ShopwareSyncApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/ShopwareSync/ShopwareSync.node.js"
+    ]
   },
   "devDependencies": {
     "@n8n/node-cli": "*",
@@ -41,5 +51,7 @@
     "release-it": "^19.0.4",
     "typescript": "5.9.2"
   },
-  "peerDependencies": { "n8n-workflow": "*" }
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
 }
