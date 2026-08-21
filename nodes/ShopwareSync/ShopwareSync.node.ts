@@ -19,7 +19,7 @@ import {
 
 export class ShopwareSync implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Shopware Sync',
+		displayName: 'Shopware Sync Api',
 		name: 'shopwareSync',
 		icon: { light: 'file:shopware.svg', dark: 'file:shopware.dark.svg' },
 		group: ['output'],
@@ -27,7 +27,7 @@ export class ShopwareSync implements INodeType {
 		subtitle: '={{ $parameter["action"] + ": " + $parameter["entity"] }}',
 		description: 'Bulk upsert or delete Shopware 6 records through the Sync API',
 		defaults: {
-			name: 'Shopware Sync',
+			name: 'Shopware Sync Api',
 		},
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
