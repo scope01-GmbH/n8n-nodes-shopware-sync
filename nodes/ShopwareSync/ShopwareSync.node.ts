@@ -98,6 +98,10 @@ export class ShopwareSync implements INodeType {
 				name: 'criteria',
 				type: 'json',
 				required: true,
+				typeOptions: {
+					alwaysOpenEditWindow: true,
+					rows: 8,
+				},
 				displayOptions: {
 					show: {
 						action: ['delete'],
@@ -143,6 +147,12 @@ export class ShopwareSync implements INodeType {
 				name: 'payloadJson',
 				type: 'json',
 				required: true,
+				typeOptions: {
+					// The inline result preview is a single truncated line; the edit window
+					// shows the fully resolved record next to the template.
+					alwaysOpenEditWindow: true,
+					rows: 12,
+				},
 				displayOptions: {
 					show: {
 						payloadSource: ['json'],
