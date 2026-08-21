@@ -128,8 +128,33 @@ export class ShopwareSync implements INodeType {
 						value: 'field',
 						description: 'Use one field of the incoming item, which must hold an object',
 					},
+					{
+						name: 'JSON',
+						value: 'json',
+						description:
+							'Write the record yourself and map fields with expressions, like the JSON body of an HTTP Request node',
+					},
 				],
 				default: 'item',
+			},
+			{
+				displayName: 'Payload (JSON)',
+				name: 'payloadJson',
+				type: 'json',
+				required: true,
+				displayOptions: {
+					show: {
+						payloadSource: ['json'],
+					},
+					hide: {
+						action: ['delete'],
+						deleteBy: ['criteria'],
+					},
+				},
+				default:
+					'{\n  "id": "{{ $json.id }}",\n  "name": "{{ $json.name }}"\n}',
+				description:
+					'One Shopware record, evaluated once per incoming item. Supply an array to emit several records from a single item. Do not wrap it in entity/action/payload - those come from the fields above.',
 			},
 			{
 				displayName: 'Payload Field',
@@ -311,6 +336,45 @@ export class ShopwareSync implements INodeType {
 
 				if (entity === '') {
 					throw new NodeOperationError(this.getNode(), 'Entity must not be empty', { itemIndex });
+				}
+
+				if (payloadSource === 'json') {
+					// Read per item so expressions inside the JSON resolve against that item.
+					const raw = this.getNodeParameter('payloadJson', itemIndex) as string | IDataObject | IDataObject[];
+
+					let parsed: IDataObject | IDataObject[];
+					try {
+						parsed = typeof raw === 'string' ? jsonParse<IDataObject | IDataObject[]>(raw) : raw;
+					} catch {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Payload (JSON) is not valid JSON after resolving expressions',
+							{ itemIndex },
+						);
+					}
+
+					// An array lets one input item expand into several Shopware records.
+					const rows = Array.isArray(parsed) ? parsed : [parsed];
+
+					if (rows.length === 0) {
+						throw new NodeOperationError(this.getNode(), 'Payload (JSON) is an empty array', {
+							itemIndex,
+						});
+					}
+
+					for (const row of rows) {
+						if (row === null || typeof row !== 'object' || Array.isArray(row)) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'Payload (JSON) must be an object, or an array of objects',
+								{ itemIndex },
+							);
+						}
+
+						records.push({ entity, action: itemAction, payload: row, itemIndex });
+					}
+
+					continue;
 				}
 
 				let payload: IDataObject;

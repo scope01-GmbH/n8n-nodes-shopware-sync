@@ -203,6 +203,70 @@ check(
 		fieldRun.requests[0].body[0].payload[0].name === `${PREFIX}field`,
 );
 
+console.log('\n=== 3b. payloadSource = json (manual mapping) ===');
+const jsonId = uuid();
+const jsonRun = await run({
+	items: [{ json: { Internal_id: jsonId, Manufacturer_name: `${PREFIX}json`, Extra: 'ignored' } }],
+	params: {
+		entity: 'product_manufacturer',
+		action: 'upsert',
+		deleteBy: 'records',
+		payloadSource: 'json',
+		// n8n resolves expressions before the node sees this; emulate the resolved string.
+		payloadJson: JSON.stringify({ id: jsonId, name: `${PREFIX}json` }),
+		batchSize: 100,
+		options: {},
+	},
+});
+check(
+	'only mapped keys are sent',
+	JSON.stringify(Object.keys(jsonRun.requests[0].body[0].payload[0]).sort()) === '["id","name"]',
+	JSON.stringify(Object.keys(jsonRun.requests[0].body[0].payload[0])),
+);
+check('json payload actually written', jsonRun.out[0].json.success === true);
+
+console.log('\n=== 3c. payloadSource = json, array expands to several records ===');
+const arrRun = await run({
+	items: [{ json: {} }],
+	params: {
+		entity: 'product_manufacturer',
+		action: 'upsert',
+		deleteBy: 'records',
+		payloadSource: 'json',
+		payloadJson: JSON.stringify([
+			{ id: uuid(), name: `${PREFIX}arr-1` },
+			{ id: uuid(), name: `${PREFIX}arr-2` },
+		]),
+		batchSize: 100,
+		options: {},
+	},
+});
+check('one item expanded to 2 records', arrRun.requests[0].body[0].payload.length === 2);
+check(
+	'both records pair back to item 0',
+	JSON.stringify(arrRun.out[0].pairedItem) === '[{"item":0},{"item":0}]',
+	JSON.stringify(arrRun.out[0].pairedItem),
+);
+
+console.log('\n=== 3d. payloadSource = json, invalid JSON is rejected ===');
+try {
+	await run({
+		items: [{ json: {} }],
+		params: {
+			entity: 'product_manufacturer',
+			action: 'upsert',
+			deleteBy: 'records',
+			payloadSource: 'json',
+			payloadJson: '{ "id": not-valid }',
+			batchSize: 100,
+			options: {},
+		},
+	});
+	check('invalid JSON throws', false, 'no error thrown');
+} catch (e) {
+	check('invalid JSON throws NodeOperationError', e.constructor.name === 'NodeOperationError', e.constructor.name);
+}
+
 console.log('\n=== 4. error handling (invalid entity) ===');
 try {
 	await run({

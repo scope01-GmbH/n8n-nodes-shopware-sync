@@ -59,6 +59,41 @@ Batch Size:    100
 Use **Payload Source → Field of Input Item** when the record sits in a nested
 field rather than at the top level of the item.
 
+Use **Payload Source → JSON** to write the record yourself and map each field with
+expressions, the way you would fill the JSON body of an HTTP Request node:
+
+```json
+{
+  "id": "{{ $json.Internal_id }}",
+  "name": "{{ $json.Manufacturer_name }}",
+  "mediaId": "{{ $json.Logo[0].internalid }}"
+}
+```
+
+Supply only the record. The `entity`, `action` and `payload` wrapper that the Sync
+API expects is built for you from the fields above, so this node sends:
+
+```json
+[{ "key": "...", "entity": "product_manufacturer", "action": "upsert",
+   "payload": [ { "id": "...", "name": "...", "mediaId": "..." } ] }]
+```
+
+The JSON is evaluated once per incoming item, so `$json.*` refers to that item.
+Returning an array emits several records from a single item:
+
+```json
+[
+  { "id": "{{ $json.a_id }}", "name": "{{ $json.a_name }}" },
+  { "id": "{{ $json.b_id }}", "name": "{{ $json.b_name }}" }
+]
+```
+
+Note that a `"{{ ... }}"` placeholder inside quotes always produces a string. If a
+source field may be missing, the literal text `undefined` is sent and Shopware
+rejects it - guard optional fields, for example
+`"mediaId": "{{ $json.Logo?.[0]?.internalid || null }}"`, or drop the quotes to
+send a real number, boolean or null.
+
 ### Delete
 
 Two modes:
