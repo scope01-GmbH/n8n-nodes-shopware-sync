@@ -11,6 +11,7 @@ import { NodeApiError, NodeConnectionTypes, NodeOperationError, jsonParse } from
 
 import {
 	buildOperations,
+	hasUnresolvedExpression,
 	normalizeShopwareUrl,
 	type PreparedOperation,
 	type ShopwareSyncResult,
@@ -151,8 +152,9 @@ export class ShopwareSync implements INodeType {
 						deleteBy: ['criteria'],
 					},
 				},
+				// Leading '=' puts the field in expression mode, so {{ }} is evaluated.
 				default:
-					'{\n  "id": "{{ $json.id }}",\n  "name": "{{ $json.name }}"\n}',
+					'={\n  "id": "{{ $json.id }}",\n  "name": "{{ $json.name }}"\n}',
 				description:
 					'One Shopware record, evaluated once per incoming item. Supply an array to emit several records from a single item. Do not wrap it in entity/action/payload - those come from the fields above.',
 			},
@@ -285,6 +287,18 @@ export class ShopwareSync implements INodeType {
 			// Criteria deletes describe the whole job in one operation, so the input
 			// items only decide whether the node runs at all.
 			const entity = this.getNodeParameter('entity', 0) as string;
+			if (hasUnresolvedExpression(this.getNode().parameters.criteria)) {
+				throw new NodeOperationError(
+					this.getNode(),
+					'Criteria contains {{ ... }} but is not in expression mode',
+					{
+						itemIndex: 0,
+						description:
+							'Hover the Criteria field and switch it from Fixed to Expression, otherwise the placeholders are sent to Shopware as literal text.',
+					},
+				);
+			}
+
 			const rawCriteria = this.getNodeParameter('criteria', 0) as string | IDataObject[];
 
 			let criteria: IDataObject[];
@@ -340,6 +354,18 @@ export class ShopwareSync implements INodeType {
 
 				if (payloadSource === 'json') {
 					// Read per item so expressions inside the JSON resolve against that item.
+					if (hasUnresolvedExpression(this.getNode().parameters.payloadJson)) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Payload (JSON) contains {{ ... }} but is not in expression mode',
+							{
+								itemIndex,
+								description:
+									'Hover the Payload (JSON) field and switch it from Fixed to Expression, otherwise the placeholders are sent to Shopware as literal text.',
+							},
+						);
+					}
+
 					const raw = this.getNodeParameter('payloadJson', itemIndex) as string | IDataObject | IDataObject[];
 
 					let parsed: IDataObject | IDataObject[];

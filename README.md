@@ -78,6 +78,13 @@ API expects is built for you from the fields above, so this node sends:
    "payload": [ { "id": "...", "name": "...", "mediaId": "..." } ] }]
 ```
 
+**The field must be in expression mode.** n8n only evaluates `{{ ... }}` when a
+parameter is switched from Fixed to Expression; in Fixed mode the placeholders are
+sent to Shopware as literal text and come back as
+`FRAMEWORK__WRITE_CONSTRAINT_VIOLATION ... is not a valid uuid`. The field ships in
+expression mode by default, and the node refuses to send a fixed-mode payload that
+still contains `{{ $... }}`.
+
 The JSON is evaluated once per incoming item, so `$json.*` refers to that item.
 Returning an array emits several records from a single item:
 

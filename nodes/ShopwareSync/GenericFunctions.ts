@@ -137,3 +137,20 @@ export function buildOperations(
 
 	return prepared;
 }
+
+/**
+ * Detects a JSON parameter left in fixed mode while containing n8n expressions.
+ *
+ * n8n only evaluates `{{ ... }}` when the parameter is in expression mode, which
+ * it stores with a leading `=`. Without it the placeholders travel to Shopware as
+ * literal text and come back as an opaque write-constraint violation, so it is
+ * worth catching here and saying what to do about it.
+ */
+export function hasUnresolvedExpression(rawParameter: unknown): boolean {
+	if (typeof rawParameter !== 'string') return false;
+	if (rawParameter.startsWith('=')) return false;
+
+	// Require a variable reference ($json, $node, ...) so literal braces in
+	// content are not mistaken for a mapping mistake.
+	return /\{\{\s*\$/.test(rawParameter);
+}

@@ -44,7 +44,13 @@ const sentRequests = [];
 function makeContext({ items, params }) {
 	return {
 		getInputData: () => items,
-		getNode: () => ({ name: 'Shopware Sync', type: 'shopwareSync', typeVersion: 1 }),
+		getNode: () => ({
+			name: 'Shopware Sync',
+			type: 'shopwareSync',
+			typeVersion: 1,
+			// The node inspects raw parameters to detect fixed-mode expressions.
+			parameters: params.__rawParameters ?? {},
+		}),
 		continueOnFail: () => params.__continueOnFail ?? false,
 		getCredentials: async () => ({
 			url: SW_URL,
@@ -266,6 +272,47 @@ try {
 } catch (e) {
 	check('invalid JSON throws NodeOperationError', e.constructor.name === 'NodeOperationError', e.constructor.name);
 }
+
+console.log('\n=== 3e. fixed-mode expressions are caught before hitting Shopware ===');
+try {
+	await run({
+		items: [{ json: { Internal_id: 'x' } }],
+		params: {
+			entity: 'product_manufacturer',
+			action: 'upsert',
+			deleteBy: 'records',
+			payloadSource: 'json',
+			payloadJson: '{ "id": "{{ $json.Internal_id }}" }',
+			// No leading '=', i.e. the field was left in Fixed mode.
+			__rawParameters: { payloadJson: '{ "id": "{{ $json.Internal_id }}" }' },
+			batchSize: 100,
+			options: {},
+		},
+	});
+	check('fixed-mode expression throws', false, 'no error thrown');
+} catch (e) {
+	check(
+		'fixed-mode expression throws before any request',
+		e.constructor.name === 'NodeOperationError' && /expression mode/.test(e.message),
+		e.message,
+	);
+}
+
+console.log('\n=== 3f. expression mode (leading =) is not flagged ===');
+const okRun = await run({
+	items: [{ json: {} }],
+	params: {
+		entity: 'product_manufacturer',
+		action: 'upsert',
+		deleteBy: 'records',
+		payloadSource: 'json',
+		payloadJson: JSON.stringify({ id: uuid(), name: `${PREFIX}exprmode` }),
+		__rawParameters: { payloadJson: '={ "id": "{{ $json.id }}" }' },
+		batchSize: 100,
+		options: {},
+	},
+});
+check('expression-mode payload passes the guard', okRun.out[0].json.success === true);
 
 console.log('\n=== 4. error handling (invalid entity) ===');
 try {
