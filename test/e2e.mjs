@@ -45,7 +45,7 @@ function makeContext({ items, params }) {
 	return {
 		getInputData: () => items,
 		getNode: () => ({
-			name: 'Shopware Sync Api',
+			name: 'Shopware Sync API',
 			type: 'shopwareSync',
 			typeVersion: 1,
 			// The node inspects raw parameters to detect fixed-mode expressions.
