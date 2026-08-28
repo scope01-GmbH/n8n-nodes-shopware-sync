@@ -168,6 +168,21 @@ less work on failure.
 Developed and tested against **Shopware 6.7**. The sync endpoint and its
 `entity`/`action`/`payload`/`criteria` contract are also present in 6.4–6.6.
 
+## Examples
+
+Importable workflows live in [`examples/`](examples/), covering every write path:
+
+| Workflow | Shows |
+|---|---|
+| [01 Create and update products](examples/01-create-and-update-products.json) | The full mandatory payload a create needs, with ids derived so re-runs update instead of duplicating |
+| [02 Update existing products by id](examples/02-update-existing-products.json) | An update carries only the id and the fields that change |
+| [03 Sync from a source system](examples/03-sync-from-source-system.json) | Mapping a PIM/ERP feed onto Shopware payloads, idempotently |
+| [04 Delete products by id](examples/04-delete-products.json) | Removing what example 01 created |
+| [05 Use the node as an AI agent tool](examples/05-ai-agent-tool.json) | The node on an agent's tool port, with `$fromAI()` parameters |
+
+See [examples/README.md](examples/README.md) for the three shop-specific ids you
+need to fill in first, and how to find them.
+
 ## Development
 
 ```bash

@@ -1,0 +1,83 @@
+{
+  "id": "shopwareUpsert01",
+  "name": "Shopware · 01 Create and update products",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "When clicking 'Execute workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---------------------------------------------------------------------------\n// Fill these in for your shop before running. See examples/README.md for the\n// two-line SQL (or the admin paths) that gives you each id.\n// ---------------------------------------------------------------------------\nconst TAX_ID = '00000000000000000000000000000000';           // Settings > Tax\nconst SALES_CHANNEL_ID = '00000000000000000000000000000000'; // Sales Channels\nconst CURRENCY_ID = 'b7d2554b0ce847cd82f3ac9bd1c0dfca';      // Shopware's default EUR (Defaults::CURRENCY)\n\nif (TAX_ID.startsWith('0000') || SALES_CHANNEL_ID.startsWith('0000')) {\n  throw new Error('Set TAX_ID and SALES_CHANNEL_ID at the top of this node - see examples/README.md');\n}\n\n// The Sync API upserts on the id you supply, so a stable id makes a workflow\n// re-runnable: the first run creates, every later run updates the same record.\n// n8n's Code sandbox disallows built-in modules, hence the inline hash.\nconst uuid = (seed) => {\n  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;\n  for (let i = 0; i < seed.length; i++) {\n    const k = seed.charCodeAt(i);\n    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);\n    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);\n    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);\n    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);\n  }\n  const part = (n) => (n >>> 0).toString(16).padStart(8, '0');\n  return part(h1) + part(h2) + part(h3) + part(h4);\n};\n\n// A create is rejected with 400 unless productNumber, name, stock, taxId and\n// price are all present. An update needs only the id plus what changes - see\n// example 02.\nconst price = (gross) => [{\n  currencyId: CURRENCY_ID,\n  gross,\n  net: Math.round((gross / 1.19) * 100) / 100,\n  linked: true,\n}];\n\nreturn [\n  { number: 'N8N-EXAMPLE-001', name: 'Example lamp, bright', gross: 19.99, stock: 25 },\n  { number: 'N8N-EXAMPLE-002', name: 'Example lamp, dim', gross: 24.5, stock: 40 },\n].map((p) => ({\n  json: {\n    id: uuid('product:' + p.number),\n    productNumber: p.number,\n    name: p.name,\n    stock: p.stock,\n    taxId: TAX_ID,\n    active: true,\n    price: price(p.gross),\n    // Without visibilities the product exists but never shows in a storefront.\n    visibilities: [{\n      id: uuid('visibility:' + p.number),\n      salesChannelId: SALES_CHANNEL_ID,\n      visibility: 30,\n    }],\n  },\n}));"
+      },
+      "id": "rows",
+      "name": "Product rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "entity": "product",
+        "batchSize": 100,
+        "options": {
+          "indexingBehavior": "use-queue-indexing"
+        },
+        "action": "upsert",
+        "payloadSource": "item"
+      },
+      "id": "sync",
+      "name": "Upsert products",
+      "type": "@scope01gmbh/n8n-nodes-shopware-sync.shopwareSync",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "shopwareSyncApi": {
+          "id": "shopwareSyncDemo",
+          "name": "Shopware Sync - demo shop"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Product rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product rows": {
+      "main": [
+        [
+          {
+            "node": "Upsert products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

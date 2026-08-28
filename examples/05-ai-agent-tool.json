@@ -1,0 +1,175 @@
+{
+  "id": "shopwareAgent05",
+  "name": "Shopware · 05 Use the node as an AI agent tool",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "chat",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a Shopware catalogue assistant.\n\n\"Create product\" adds a new product. Ask for a name and a gross price in EUR if you do not have both. Invent a product number in the form N8N-EXAMPLE-### unless the user gives one. Stock defaults to 10.\n\n\"Rename product\" changes the name of a product that already exists and needs its 32-character hex id. Never invent an id - ask for it instead.\n\nBoth tools upsert, so calling one twice with the same product number updates rather than duplicates. Confirm what changed after every write. If a tool errors, report the error text verbatim."
+        }
+      },
+      "id": "agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        260,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "model",
+      "name": "Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        160,
+        -20
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "memory",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        300,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Create a new product in Shopware with all mandatory fields. Input: product name, gross price in EUR, a unique product number, and optionally stock. Upserts on an id derived from the product number.",
+        "entity": "product",
+        "action": "upsert",
+        "payloadSource": "json",
+        "payloadJson": "={\n  \"id\": \"{{ $fromAI('productNumber', 'Unique product number for the new product, e.g. N8N-EXAMPLE-003', 'string').hash() }}\",\n  \"productNumber\": \"{{ $fromAI('productNumber', 'Unique product number for the new product, e.g. N8N-EXAMPLE-003', 'string') }}\",\n  \"name\": \"{{ $fromAI('productName', 'The product name', 'string') }}\",\n  \"stock\": {{ $fromAI('stock', 'Stock quantity, whole number', 'number', 10) }},\n  \"taxId\": \"00000000000000000000000000000000\",\n  \"active\": true,\n  \"price\": [\n    {\n      \"currencyId\": \"b7d2554b0ce847cd82f3ac9bd1c0dfca\",\n      \"gross\": {{ $fromAI('priceGross', 'Gross price in EUR, e.g. 19.99', 'number') }},\n      \"net\": {{ Math.round(($fromAI('priceGross', 'Gross price in EUR, e.g. 19.99', 'number') / 1.19) * 100) / 100 }},\n      \"linked\": true\n    }\n  ]\n}",
+        "batchSize": 100,
+        "options": {
+          "indexingBehavior": "use-queue-indexing",
+          "simplify": true
+        }
+      },
+      "id": "toolCreate",
+      "name": "Create product",
+      "type": "@scope01gmbh/n8n-nodes-shopware-sync.shopwareSyncTool",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -20
+      ],
+      "credentials": {
+        "shopwareSyncApi": {
+          "id": "shopwareSyncDemo",
+          "name": "Shopware Sync - demo shop"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Rename a product that already exists in Shopware. Input: the product's 32-character hex id and the new name.",
+        "entity": "product",
+        "action": "upsert",
+        "payloadSource": "json",
+        "payloadJson": "={\n  \"id\": \"{{ $fromAI('productId', 'The existing Shopware product id, a 32-character hex string', 'string') }}\",\n  \"name\": \"{{ $fromAI('productName', 'The new name for the product', 'string') }}\"\n}",
+        "batchSize": 100,
+        "options": {
+          "indexingBehavior": "use-queue-indexing",
+          "simplify": true
+        }
+      },
+      "id": "toolRename",
+      "name": "Rename product",
+      "type": "@scope01gmbh/n8n-nodes-shopware-sync.shopwareSyncTool",
+      "typeVersion": 1,
+      "position": [
+        700,
+        -20
+      ],
+      "credentials": {
+        "shopwareSyncApi": {
+          "id": "shopwareSyncDemo",
+          "name": "Shopware Sync - demo shop"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create product": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rename product": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

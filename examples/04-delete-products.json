@@ -1,0 +1,85 @@
+{
+  "id": "shopwareDelete04",
+  "name": "Shopware · 04 Delete products by id",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "When clicking 'Execute workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The Sync API upserts on the id you supply, so a stable id makes a workflow\n// re-runnable: the first run creates, every later run updates the same record.\n// n8n's Code sandbox disallows built-in modules, hence the inline hash.\nconst uuid = (seed) => {\n  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;\n  for (let i = 0; i < seed.length; i++) {\n    const k = seed.charCodeAt(i);\n    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);\n    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);\n    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);\n    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);\n  }\n  const part = (n) => (n >>> 0).toString(16).padStart(8, '0');\n  return part(h1) + part(h2) + part(h3) + part(h4);\n};\n\n// Deletes exactly what example 01 created.\nreturn ['N8N-EXAMPLE-001', 'N8N-EXAMPLE-002'].map((number) => ({\n  json: { id: uuid('product:' + number), productNumber: number },\n}));"
+      },
+      "id": "rows",
+      "name": "Ids to delete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "entity": "product",
+        "batchSize": 100,
+        "options": {
+          "indexingBehavior": "use-queue-indexing"
+        },
+        "action": "delete",
+        "deleteBy": "records",
+        "payloadSource": "json",
+        "payloadJson": "={\n  \"id\": \"{{ $json.id }}\"\n}"
+      },
+      "id": "sync",
+      "name": "Delete products",
+      "type": "@scope01gmbh/n8n-nodes-shopware-sync.shopwareSync",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "shopwareSyncApi": {
+          "id": "shopwareSyncDemo",
+          "name": "Shopware Sync - demo shop"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Ids to delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ids to delete": {
+      "main": [
+        [
+          {
+            "node": "Delete products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

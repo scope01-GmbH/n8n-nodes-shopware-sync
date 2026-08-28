@@ -11,6 +11,7 @@ import { NodeApiError, NodeConnectionTypes, NodeOperationError, jsonParse } from
 
 import {
 	buildOperations,
+	describeShopwareErrors,
 	hasUnresolvedExpression,
 	normalizeShopwareUrl,
 	type PreparedOperation,
@@ -480,6 +481,7 @@ export class ShopwareSync implements INodeType {
 							records: operation.payload?.length ?? 0,
 							success: false,
 							error: (error as Error).message,
+							detail: describeShopwareErrors(error),
 						},
 						pairedItem,
 					});
@@ -488,6 +490,7 @@ export class ShopwareSync implements INodeType {
 
 				throw new NodeApiError(this.getNode(), error as JsonObject, {
 					message: `Shopware sync failed for operation "${operation.key}"`,
+					description: describeShopwareErrors(error),
 				});
 			}
 		}

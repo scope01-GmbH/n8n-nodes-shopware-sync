@@ -1,0 +1,83 @@
+{
+  "id": "shopwareSync03",
+  "name": "Shopware · 03 Sync products from a source system",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "When clicking 'Execute workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---------------------------------------------------------------------------\n// Fill these in for your shop before running. See examples/README.md for the\n// two-line SQL (or the admin paths) that gives you each id.\n// ---------------------------------------------------------------------------\nconst TAX_ID = '00000000000000000000000000000000';           // Settings > Tax\nconst SALES_CHANNEL_ID = '00000000000000000000000000000000'; // Sales Channels\nconst CURRENCY_ID = 'b7d2554b0ce847cd82f3ac9bd1c0dfca';      // Shopware's default EUR (Defaults::CURRENCY)\n\nif (TAX_ID.startsWith('0000') || SALES_CHANNEL_ID.startsWith('0000')) {\n  throw new Error('Set TAX_ID and SALES_CHANNEL_ID at the top of this node - see examples/README.md');\n}\n\n// The Sync API upserts on the id you supply, so a stable id makes a workflow\n// re-runnable: the first run creates, every later run updates the same record.\n// n8n's Code sandbox disallows built-in modules, hence the inline hash.\nconst uuid = (seed) => {\n  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;\n  for (let i = 0; i < seed.length; i++) {\n    const k = seed.charCodeAt(i);\n    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);\n    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);\n    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);\n    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);\n  }\n  const part = (n) => (n >>> 0).toString(16).padStart(8, '0');\n  return part(h1) + part(h2) + part(h3) + part(h4);\n};\n\n// Stand-in for a PIM/ERP feed - swap this array for an HTTP Request, a database\n// node, or the Pimcore Datahub node. The mapping below is the part that matters:\n// upstream ids become stable Shopware ids, so the sync is idempotent.\nconst source = [\n  { sku: 'ERP-1001', title: 'Imported chair', priceGross: 89.0, quantity: 12 },\n  { sku: 'ERP-1002', title: 'Imported table', priceGross: 249.0, quantity: 3 },\n  { sku: 'ERP-1003', title: 'Imported shelf', priceGross: 129.5, quantity: 7 },\n];\n\nreturn source.map((row) => ({\n  json: {\n    id: uuid('erp:' + row.sku),\n    productNumber: row.sku,\n    name: row.title,\n    stock: row.quantity,\n    taxId: TAX_ID,\n    active: true,\n    price: [{\n      currencyId: CURRENCY_ID,\n      gross: row.priceGross,\n      net: Math.round((row.priceGross / 1.19) * 100) / 100,\n      linked: true,\n    }],\n    visibilities: [{\n      id: uuid('visibility:erp:' + row.sku),\n      salesChannelId: SALES_CHANNEL_ID,\n      visibility: 30,\n    }],\n  },\n}));"
+      },
+      "id": "rows",
+      "name": "Source rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "entity": "product",
+        "batchSize": 50,
+        "options": {
+          "indexingBehavior": "use-queue-indexing"
+        },
+        "action": "upsert",
+        "payloadSource": "item"
+      },
+      "id": "sync",
+      "name": "Sync to Shopware",
+      "type": "@scope01gmbh/n8n-nodes-shopware-sync.shopwareSync",
+      "typeVersion": 1,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "shopwareSyncApi": {
+          "id": "shopwareSyncDemo",
+          "name": "Shopware Sync - demo shop"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Source rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Source rows": {
+      "main": [
+        [
+          {
+            "node": "Sync to Shopware",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

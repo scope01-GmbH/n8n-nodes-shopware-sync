@@ -154,3 +154,65 @@ export function hasUnresolvedExpression(rawParameter: unknown): boolean {
 	// content are not mistaken for a mapping mistake.
 	return /\{\{\s*\$/.test(rawParameter);
 }
+
+/** One entry of Shopware's `errors` array. */
+interface ShopwareApiError {
+	detail?: string;
+	title?: string;
+	source?: { pointer?: string };
+}
+
+/**
+ * Digs Shopware's `errors` array out of a failed request, wherever it landed.
+ *
+ * The helper that throws wraps the response differently depending on how the
+ * request failed, so the body turns up under `response.body`, `body`, `error`,
+ * or one level down under `cause` - hence the sweep rather than one lookup.
+ */
+function findApiErrors(value: unknown, depth = 0): ShopwareApiError[] {
+	if (depth > 3 || value === null || typeof value !== 'object') return [];
+
+	const record = value as Record<string, unknown>;
+
+	if (Array.isArray(record.errors)) {
+		return record.errors.filter(
+			(entry): entry is ShopwareApiError => typeof entry === 'object' && entry !== null,
+		);
+	}
+
+	for (const key of ['response', 'body', 'error', 'cause', 'data']) {
+		const found = findApiErrors(record[key], depth + 1);
+		if (found.length > 0) return found;
+	}
+
+	return [];
+}
+
+/**
+ * Turns those errors into one line fit for NodeApiError's description.
+ *
+ * Without this n8n derives its message from the HTTP status alone: a 400 reads
+ * "Bad request - please check your parameters" and a 403 reads "Forbidden -
+ * perhaps check your credentials", which sends people off to re-check
+ * credentials that are fine. Shopware puts the real reason in `detail` and
+ * names the offending field in `source.pointer`.
+ *
+ * A rejected sync reports every invalid field of every record, so a batch of
+ * 50 can produce hundreds of entries. The list is capped and the remainder
+ * counted rather than pasted.
+ */
+export function describeShopwareErrors(error: unknown, limit = 5): string | undefined {
+	const errors = findApiErrors(error);
+	if (errors.length === 0) return undefined;
+
+	const lines = errors.slice(0, limit).map((entry) => {
+		const text = entry.detail ?? entry.title ?? 'Unknown error';
+		const pointer = entry.source?.pointer;
+		return pointer ? `${text} (at ${pointer})` : text;
+	});
+
+	const remaining = errors.length - lines.length;
+	if (remaining > 0) lines.push(`and ${remaining} more`);
+
+	return lines.join('; ');
+}
