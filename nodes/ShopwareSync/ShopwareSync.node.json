@@ -1,5 +1,5 @@
 {
-	"node": "n8n-nodes-base.shopwareSync",
+	"node": "@scope01gmbh/n8n-nodes-shopware-sync.shopwareSync",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Data & Storage", "Development"],
