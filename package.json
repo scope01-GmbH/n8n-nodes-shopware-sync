@@ -1,6 +1,6 @@
 {
   "name": "@scope01gmbh/n8n-nodes-shopware-sync",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "n8n community node for the Shopware 6 Sync API - bulk upsert and delete across any entity, with automatic batching",
   "license": "MIT",
   "publishConfig": {
